@@ -31,7 +31,7 @@ class CPerfObjectInstance
 
     CPerfCounter * GetNextCounter( void );
 
-    CPerfCounter * GetCounterByName( PCTSTR const pszName );
+    CPerfCounter * GetCounterByName( PCTSTR const pszName ) const;
 
     protected:
         
@@ -45,7 +45,7 @@ class CPerfObjectInstance
 
     CPerfTitleDatabase * m_pPerfCounterTitles;
 
-    CPerfCounter * MakeCounter( PPERF_COUNTER_DEFINITION const pCounter );
+    CPerfCounter * MakeCounter( PPERF_COUNTER_DEFINITION const pCounter ) const;
 
     CPerfCounter * GetCounterByIndex( DWORD index );
 

@@ -7,6 +7,10 @@
 
 #include <windows.h>
 #include <vector>
+#include <map>
+#include <memory>
+#include <algorithm>
+
 #include "../PluginPerfMon/Titledb.h"
 #include "../PluginPerfMon/PerfSnap.h"
 #include "../PluginPerfMon/PerfObj.h"
@@ -33,16 +37,21 @@ struct MeasureData
 	}
 };
 
+typedef int processId_type;
+
 struct ProcessValues
 {
 	RawString name;
-	LONGLONG oldValue;
-	LONGLONG newValue;
-	bool found;
+	processId_type ProcessId = 0;
+	LONGLONG oldValue = 0LL;
+	LONGLONG newValue = 0LL;
+	LONG generation = 0;
 };
 
 static CPerfTitleDatabase g_CounterTitles(PERF_TITLE_COUNTER);
-std::vector<ProcessValues> g_Processes;
+std::map<processId_type, ProcessValues> g_Processes;
+
+static LONG Generation = 0;
 
 void UpdateProcesses();
 
@@ -165,14 +174,14 @@ PLUGIN_EXPORT double Update(void* data)
 
 	LONGLONG newValue = 0;
 
-	for (size_t i = 0; i < g_Processes.size(); ++i)
+	for (auto it = g_Processes.begin(); it != g_Processes.end(); ++it)
 	{
 		// Check process include/exclude
-		if (CheckProcess(measure, g_Processes[i].name.c_str()))
+		if (CheckProcess(measure, it->second.name.c_str()))
 		{
-			if (g_Processes[i].oldValue != 0)
+			if (it->second.oldValue != 0)
 			{
-				LONGLONG value = g_Processes[i].newValue - g_Processes[i].oldValue;
+				LONGLONG value = it->second.newValue - it->second.oldValue;
 
 				if (measure->topProcess == 0)
 				{
@@ -185,7 +194,7 @@ PLUGIN_EXPORT double Update(void* data)
 					if (newValue < value)
 					{
 						newValue = value;
-						measure->topProcessName = g_Processes[i].name;
+						measure->topProcessName = it->second.name;
 						measure->topProcessValue = newValue;
 					}
 				}
@@ -219,72 +228,115 @@ PLUGIN_EXPORT void Finalize(void* data)
 /*
   This updates the process status
 */
+template <typename counterType>
+bool GetCounterData(const CPerfObjectInstance * pInstance, PCTSTR counterName, counterType & counterValue)
+{
+	std::unique_ptr<CPerfCounter> pPerfCntr(pInstance->GetCounterByName(counterName));
+	if (pPerfCntr != nullptr)
+	{
+		if (pPerfCntr->GetSize() == sizeof counterType)
+		{
+			BYTE data[sizeof counterType];
+
+			pPerfCntr->GetData(data, sizeof counterType, nullptr);
+
+			counterValue = *((counterType *)data);
+
+			return true;
+		}
+	}
+	
+	return false;
+}
+
 void UpdateProcesses()
 {
 	BYTE data[256];
 	WCHAR name[256];
-
-	std::vector<ProcessValues> newProcesses;
-	newProcesses.reserve(g_Processes.size());
 
 	CPerfSnapshot snapshot(&g_CounterTitles);
 	CPerfObjectList objList(&snapshot, &g_CounterTitles);
 
 	if (snapshot.TakeSnapshot(L"Process"))
 	{
-		CPerfObject* pPerfObj = objList.GetPerfObject(L"Process");
+		std::unique_ptr<CPerfObject> pPerfObj(objList.GetPerfObject(L"Process"));
 
 		if (pPerfObj)
 		{
-			for (CPerfObjectInstance* pObjInst = pPerfObj->GetFirstObjectInstance();
+			// Update generation
+			Generation++;
+
+			for (std::unique_ptr<CPerfObjectInstance> pObjInst(pPerfObj->GetFirstObjectInstance());
 				pObjInst != nullptr;
-				pObjInst = pPerfObj->GetNextObjectInstance())
+				pObjInst.reset(pPerfObj->GetNextObjectInstance()))
 			{
 				if (pObjInst->GetObjectInstanceName(name, 256))
 				{
 					if (_wcsicmp(name, L"_Total") == 0)
 					{
-						delete pObjInst;
 						continue;
 					}
 
-					CPerfCounter* pPerfCntr = pObjInst->GetCounterByName(L"% Processor Time");
+					ULONGLONG procTime;
+					GetCounterData(pObjInst.get(), L"% Processor Time", procTime);
+
+					std::unique_ptr<CPerfCounter> pPerfCntr(pObjInst->GetCounterByName(L"% Processor Time"));
 					if (pPerfCntr != nullptr)
 					{
 						pPerfCntr->GetData(data, 256, nullptr);
 
 						if (pPerfCntr->GetSize() == 8)
 						{
-							ProcessValues values;
-							values.name = name;
-							values.oldValue = 0;
-							values.newValue = *(ULONGLONG*)data;
-							values.found = false;
+							ULONGLONG newData = *(ULONGLONG*)data;
 
-							// Check if we can find the old value
-							for (size_t i = 0; i < g_Processes.size(); ++i)
+							std::unique_ptr<CPerfCounter> pProcessIdData(pObjInst->GetCounterByName(L"ID Process"));
+							if (pProcessIdData != nullptr)
 							{
-								if (!g_Processes[i].found && _wcsicmp(g_Processes[i].name.c_str(), name) == 0)
+								if (pProcessIdData->GetSize() == sizeof(processId_type))
 								{
-									values.oldValue = g_Processes[i].newValue;
-									g_Processes[i].found = true;
-									break;
+									pProcessIdData->GetData(data, 256, nullptr);
+									processId_type id = *(processId_type*)data;
+
+									// Update new or old processvalues in g_Processes
+									// [id] will create a new entry, if one doesn't exist
+									auto it = g_Processes.find(id);
+									if (it != g_Processes.end())
+									{
+										// Already exists, only update necessary fields
+										it->second.oldValue = it->second.newValue;
+										it->second.newValue = newData;
+										it->second.generation = Generation;
+									}
+									else
+									{
+										ProcessValues newValues;
+
+										newValues.name = name;
+										newValues.newValue = newData;
+										newValues.generation = Generation;
+										newValues.ProcessId = id;
+
+										g_Processes.emplace(id, newValues);
+									}
 								}
 							}
-
-							newProcesses.push_back(std::move(values));
 						}
-
-						delete pPerfCntr;
 					}
 				}
-
-				delete pObjInst;
 			}
 
-			delete pPerfObj;
+			// Clean up dead processes
+			for (auto it = g_Processes.begin(); it != g_Processes.end();)
+			{
+				if (it->second.generation != Generation)
+				{
+					it = g_Processes.erase(it);
+				}
+				else
+				{
+					it++;
+				}
+			}
 		}
 	}
-
-	g_Processes = std::move(newProcesses);
 }

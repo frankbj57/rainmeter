@@ -57,7 +57,7 @@ CPerfObjectInstance::GetObjectInstanceName(
 }
 
 CPerfCounter *
-CPerfObjectInstance::MakeCounter( PPERF_COUNTER_DEFINITION const pCounterDef )
+CPerfObjectInstance::MakeCounter( PPERF_COUNTER_DEFINITION const pCounterDef ) const
 {
 	// Look up the name of this counter in the title database
 	PTSTR pszName = m_pPerfCounterTitles->GetTitleStringFromIndex(
@@ -113,7 +113,7 @@ CPerfObjectInstance::GetNextCounter( void )
 }
 
 CPerfCounter *
-CPerfObjectInstance::GetCounterByName( PCTSTR const pszName )
+CPerfObjectInstance::GetCounterByName( PCTSTR const pszName ) const
 {
 	DWORD cntrIdx = m_pPerfCounterTitles->GetIndexFromTitleString(pszName);
 	if ( cntrIdx == 0 )
