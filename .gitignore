@@ -8,6 +8,7 @@ Certificate.bat
 *.aps
 *.docstates
 *.exe
+*.db
 *.opendb
 *.opensdf
 *.sdf
