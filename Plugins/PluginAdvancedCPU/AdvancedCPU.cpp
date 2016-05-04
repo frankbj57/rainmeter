@@ -29,10 +29,12 @@ struct MeasureData
 	int topProcess;
 	RawString topProcessName;
 	LONGLONG topProcessValue;
+	int topIndex;
 
 	MeasureData() :
 		topProcess(-1),
-		topProcessValue()
+		topProcessValue(),
+		topIndex(1)
 	{
 	}
 };
@@ -42,11 +44,23 @@ typedef int processId_type;
 struct ProcessValues
 {
 	RawString name;
-	processId_type ProcessId = 0;
 	LONGLONG oldValue = 0LL;
 	LONGLONG newValue = 0LL;
 	LONG generation = 0;
 };
+
+bool largerThan(const ProcessValues &left, const ProcessValues &right)
+{
+	LONGLONG valueleft = left.newValue - left.oldValue;
+	LONGLONG valueright = right.newValue - right.oldValue;
+
+	return valueleft > valueright;
+}
+
+bool operator==(const RawString &left, const RawString &right)
+{
+	return _wcsicmp(left.c_str(), right.c_str()) == 0;
+}
 
 static CPerfTitleDatabase g_CounterTitles(PERF_TITLE_COUNTER);
 std::map<processId_type, ProcessValues> g_Processes;
@@ -108,6 +122,15 @@ PLUGIN_EXPORT void Reload(void* data, void* rm, double* maxValue)
 		changed = true;
 	}
 
+	int topIndex = RmReadInt(rm, L"TopIndex", 1);
+	// Validate
+	topIndex = (1 <= topIndex && topIndex <= 10 ? topIndex : 1);
+	if (topIndex != measure->topIndex)
+	{
+		measure->topIndex = topIndex;
+		changed = true;
+	}
+
 	if (changed)
 	{
 		*maxValue = 10000000;	// The values are 100 * 100000
@@ -118,26 +141,22 @@ bool CheckProcess(MeasureData* measure, const WCHAR* name)
 {
 	if (measure->includes.empty())
 	{
-		for (size_t i = 0; i < measure->excludes.size(); ++i)
-		{
-			if (_wcsicmp(measure->excludes[i].c_str(), name) == 0)
-			{
+		auto it = std::find(measure->excludes.begin(), measure->excludes.end(), name);
+
+		if (it != measure->excludes.end())
 				return false;		// Exclude
-			}
-		}
+
 		return true;	// Include
 	}
 	else
 	{
-		for (size_t i = 0; i < measure->includes.size(); ++i)
-		{
-			if (_wcsicmp(measure->includes[i].c_str(), name) == 0)
-			{
-				return true;	// Include
-			}
-		}
+		auto it = std::find(measure->includes.begin(), measure->includes.end(), name);
+
+		if (it != measure->includes.end())
+			return true;	// Include
 	}
-	return false;
+
+	return false;  // Exclude
 }
 
 ULONGLONG _GetTickCount64()
@@ -174,6 +193,16 @@ PLUGIN_EXPORT double Update(void* data)
 
 	LONGLONG newValue = 0;
 
+	int numTops = 0;
+	if (measure->topProcess != 0
+		&&
+		measure->topIndex > 1)
+	{
+		numTops = measure->topIndex;
+	}
+
+	std::vector<ProcessValues> topData(numTops);
+
 	for (auto it = g_Processes.begin(); it != g_Processes.end(); ++it)
 	{
 		// Check process include/exclude
@@ -188,7 +217,7 @@ PLUGIN_EXPORT double Update(void* data)
 					// Add all values together
 					newValue += value;
 				}
-				else
+				else if (numTops == 0)
 				{
 					// Find the top process
 					if (newValue < value)
@@ -198,8 +227,39 @@ PLUGIN_EXPORT double Update(void* data)
 						measure->topProcessValue = newValue;
 					}
 				}
+				else
+				{
+					// Find the numtops top processes
+					if (largerThan(it->second, topData[0]))
+					{
+						// Find the place to insert the info for this process
+						// It has already been established that it is larger than the
+						// first, start looking at the next
+						int i = 1;
+						while (i < numTops && largerThan(it->second, topData[i]))
+						{
+							// It is also larger than this, move this down
+							topData[i - 1] = topData[i];
+							// Look at the next one towards the top
+							i++;
+						}
+						// i now is the index of the one that should not be moved
+						// insert the new one in the next place, the previous has been 
+						// moved or should not be used any more
+						topData[i - 1] = it->second;
+					}
+				}
 			}
 		}
+	}
+
+	if (measure->topProcess != 0
+		&&
+		numTops > 1)
+	{
+		newValue = topData[0].newValue - topData[0].oldValue;
+		measure->topProcessName = topData[0].name;
+		measure->topProcessValue = newValue;
 	}
 
 	return (double)newValue;
@@ -251,7 +311,6 @@ bool GetCounterData(const CPerfObjectInstance * pInstance, PCTSTR counterName, c
 
 void UpdateProcesses()
 {
-	BYTE data[256];
 	WCHAR name[256];
 
 	CPerfSnapshot snapshot(&g_CounterTitles);
@@ -274,52 +333,39 @@ void UpdateProcesses()
 				{
 					if (_wcsicmp(name, L"_Total") == 0)
 					{
+						// Don't add _Total to the list
+						// And to confuse things, it has process ID 0
 						continue;
 					}
+				}
 
-					ULONGLONG procTime;
-					GetCounterData(pObjInst.get(), L"% Processor Time", procTime);
-
-					std::unique_ptr<CPerfCounter> pPerfCntr(pObjInst->GetCounterByName(L"% Processor Time"));
-					if (pPerfCntr != nullptr)
+				LONGLONG newData;
+				if (GetCounterData(pObjInst.get(), L"% Processor Time", newData))
+				{
+					processId_type id;
+					if (GetCounterData(pObjInst.get(), L"ID Process", id))
 					{
-						pPerfCntr->GetData(data, 256, nullptr);
-
-						if (pPerfCntr->GetSize() == 8)
+						// Update new or old processvalues in g_Processes
+						// using a map speeds up lookup
+						auto it = g_Processes.find(id);
+						if (it != g_Processes.end())
 						{
-							ULONGLONG newData = *(ULONGLONG*)data;
+							// Already exists, only update necessary fields
+							it->second.oldValue = it->second.newValue;
+							it->second.newValue = newData;
+							it->second.generation = Generation;
+						}
+						else
+						{
+							// We only need to get and check the name for new id's
+							ProcessValues newValues;
 
-							std::unique_ptr<CPerfCounter> pProcessIdData(pObjInst->GetCounterByName(L"ID Process"));
-							if (pProcessIdData != nullptr)
-							{
-								if (pProcessIdData->GetSize() == sizeof(processId_type))
-								{
-									pProcessIdData->GetData(data, 256, nullptr);
-									processId_type id = *(processId_type*)data;
+							newValues.name = name;
+							newValues.oldValue = 0LL;
+							newValues.newValue = newData;
+							newValues.generation = Generation;
 
-									// Update new or old processvalues in g_Processes
-									// [id] will create a new entry, if one doesn't exist
-									auto it = g_Processes.find(id);
-									if (it != g_Processes.end())
-									{
-										// Already exists, only update necessary fields
-										it->second.oldValue = it->second.newValue;
-										it->second.newValue = newData;
-										it->second.generation = Generation;
-									}
-									else
-									{
-										ProcessValues newValues;
-
-										newValues.name = name;
-										newValues.newValue = newData;
-										newValues.generation = Generation;
-										newValues.ProcessId = id;
-
-										g_Processes.emplace(id, newValues);
-									}
-								}
-							}
+							g_Processes.emplace(id, newValues);
 						}
 					}
 				}

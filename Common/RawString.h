@@ -77,5 +77,4 @@ private:
 
 	wchar_t* m_String;
 };
-
 #endif
