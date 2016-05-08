@@ -335,6 +335,7 @@ void UpdateProcesses()
 					{
 						// Don't add _Total to the list
 						// And to confuse things, it has process ID 0
+						// So this fetch and check cannot be moved down to creating new ProcessValues
 						continue;
 					}
 				}
@@ -357,7 +358,6 @@ void UpdateProcesses()
 						}
 						else
 						{
-							// We only need to get and check the name for new id's
 							ProcessValues newValues;
 
 							newValues.name = name;
