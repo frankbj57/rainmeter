@@ -29,12 +29,10 @@ struct MeasureData
 	int topProcess;
 	RawString topProcessName;
 	LONGLONG topProcessValue;
-	int topIndex;
 
 	MeasureData() :
 		topProcess(-1),
-		topProcessValue(),
-		topIndex(1)
+		topProcessValue()
 	{
 	}
 };
@@ -49,14 +47,7 @@ struct ProcessValues
 	LONG generation = 0;
 };
 
-bool largerThan(const ProcessValues &left, const ProcessValues &right)
-{
-	LONGLONG valueleft = left.newValue - left.oldValue;
-	LONGLONG valueright = right.newValue - right.oldValue;
-
-	return valueleft > valueright;
-}
-
+// Use in std::find algorithm for Rawstring vectors
 bool operator==(const RawString &left, const RawString &right)
 {
 	return _wcsicmp(left.c_str(), right.c_str()) == 0;
@@ -122,15 +113,6 @@ PLUGIN_EXPORT void Reload(void* data, void* rm, double* maxValue)
 		changed = true;
 	}
 
-	int topIndex = RmReadInt(rm, L"TopIndex", 1);
-	// Validate
-	topIndex = (1 <= topIndex && topIndex <= 10 ? topIndex : 1);
-	if (topIndex != measure->topIndex)
-	{
-		measure->topIndex = topIndex;
-		changed = true;
-	}
-
 	if (changed)
 	{
 		*maxValue = 10000000;	// The values are 100 * 100000
@@ -193,16 +175,6 @@ PLUGIN_EXPORT double Update(void* data)
 
 	LONGLONG newValue = 0;
 
-	int numTops = 0;
-	if (measure->topProcess != 0
-		&&
-		measure->topIndex > 1)
-	{
-		numTops = measure->topIndex;
-	}
-
-	std::vector<ProcessValues> topData(numTops);
-
 	for (auto it = g_Processes.begin(); it != g_Processes.end(); ++it)
 	{
 		// Check process include/exclude
@@ -217,7 +189,7 @@ PLUGIN_EXPORT double Update(void* data)
 					// Add all values together
 					newValue += value;
 				}
-				else if (numTops == 0)
+				else
 				{
 					// Find the top process
 					if (newValue < value)
@@ -227,42 +199,11 @@ PLUGIN_EXPORT double Update(void* data)
 						measure->topProcessValue = newValue;
 					}
 				}
-				else
-				{
-					// Find the numtops top processes
-					if (largerThan(it->second, topData[0]))
-					{
-						// Find the place to insert the info for this process
-						// It has already been established that it is larger than the
-						// first, start looking at the next
-						int i = 1;
-						while (i < numTops && largerThan(it->second, topData[i]))
-						{
-							// It is also larger than this, move this down
-							topData[i - 1] = topData[i];
-							// Look at the next one towards the top
-							i++;
-						}
-						// i now is the index of the one that should not be moved
-						// insert the new one in the next place, the previous has been 
-						// moved or should not be used any more
-						topData[i - 1] = it->second;
-					}
-				}
 			}
 		}
 	}
 
-	if (measure->topProcess != 0
-		&&
-		numTops > 1)
-	{
-		newValue = topData[0].newValue - topData[0].oldValue;
-		measure->topProcessName = topData[0].name;
-		measure->topProcessValue = newValue;
-	}
-
-	return (double)newValue;
+	return (double) newValue;
 }
 
 PLUGIN_EXPORT LPCWSTR GetString(void* data)
@@ -286,7 +227,8 @@ PLUGIN_EXPORT void Finalize(void* data)
 }
 
 /*
-  This updates the process status
+Template function to obtain counter data for the standard types
+Specialize, if string and other special formats are needed
 */
 template <typename counterType>
 bool GetCounterData(const CPerfObjectInstance * pInstance, PCTSTR counterName, counterType & counterValue)
@@ -309,6 +251,9 @@ bool GetCounterData(const CPerfObjectInstance * pInstance, PCTSTR counterName, c
 	return false;
 }
 
+/*
+This updates the process status
+*/
 void UpdateProcesses()
 {
 	WCHAR name[256];
@@ -329,22 +274,30 @@ void UpdateProcesses()
 				pObjInst != nullptr;
 				pObjInst.reset(pPerfObj->GetNextObjectInstance()))
 			{
-				if (pObjInst->GetObjectInstanceName(name, 256))
-				{
-					if (_wcsicmp(name, L"_Total") == 0)
-					{
-						// Don't add _Total to the list
-						// And to confuse things, it has process ID 0
-						continue;
-					}
-				}
-
 				LONGLONG newData;
 				if (GetCounterData(pObjInst.get(), L"% Processor Time", newData))
 				{
 					processId_type id;
 					if (GetCounterData(pObjInst.get(), L"ID Process", id))
 					{
+						// Total_ also has process id == 0
+						// Make a special case for this, so we don't have to
+						// find the name for all ids.
+
+						if (id == 0)
+						{
+							// We only need to get and check the name id == 0
+							if (pObjInst->GetObjectInstanceName(name, 256))
+							{
+								if (_wcsicmp(name, L"_Total") == 0)
+								{
+									// Don't add _Total to the list
+									// And to confuse things, it has process ID 0
+									continue;
+								}
+							}
+						}
+
 						// Update new or old processvalues in g_Processes
 						// using a map speeds up lookup
 						auto it = g_Processes.find(id);
@@ -358,14 +311,24 @@ void UpdateProcesses()
 						else
 						{
 							// We only need to get and check the name for new id's
-							ProcessValues newValues;
+							if (pObjInst->GetObjectInstanceName(name, 256))
+							{
+								if (_wcsicmp(name, L"_Total") == 0)
+								{
+									// Don't add _Total to the list
+									continue;
+								}
 
-							newValues.name = name;
-							newValues.oldValue = 0LL;
-							newValues.newValue = newData;
-							newValues.generation = Generation;
+								ProcessValues newValues;
 
-							g_Processes.emplace(id, newValues);
+								newValues.name = name;
+								newValues.oldValue = 0LL;
+								newValues.newValue = newData;
+								newValues.generation = Generation;
+
+								g_Processes.emplace(id, newValues);
+
+							}
 						}
 					}
 				}
