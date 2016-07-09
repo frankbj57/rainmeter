@@ -39,6 +39,8 @@ if not exist "$(OutDir)Layouts" xcopy /Q /S /Y ..\Build\Layouts "$(OutDir)Layout
     <Link>
       <EntryPointSymbol>Main</EntryPointSymbol>
       <IgnoreAllDefaultLibraries>true</IgnoreAllDefaultLibraries>
+      <Profile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</Profile>
+      <Profile Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</Profile>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>

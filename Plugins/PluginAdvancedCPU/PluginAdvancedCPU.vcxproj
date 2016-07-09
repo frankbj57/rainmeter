@@ -22,6 +22,12 @@
     </ClCompile>
     <Link>
     </Link>
+    <Link>
+      <Profile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</Profile>
+    </Link>
+    <Link>
+      <Profile Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</Profile>
+    </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="AdvancedCPU.cpp" />
