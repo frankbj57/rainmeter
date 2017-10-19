@@ -80,6 +80,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		Performance1.psess = Performance1.psess
 	EndProjectSection
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "TestAdvancedCPU", "TestAdvancedCPU\TestAdvancedCPU.vcxproj", "{4CA83A4D-71A0-4A89-B3ED-36B770454202}"
+EndProject
 Global
 	GlobalSection(Performance) = preSolution
 		HasPerformanceSessions = true
@@ -339,6 +341,14 @@ Global
 		{B9184DBA-C6B7-44FE-8BBD-0852DB22D2E4}.Release|Win32.Build.0 = Release|Win32
 		{B9184DBA-C6B7-44FE-8BBD-0852DB22D2E4}.Release|x64.ActiveCfg = Release|x64
 		{B9184DBA-C6B7-44FE-8BBD-0852DB22D2E4}.Release|x64.Build.0 = Release|x64
+		{4CA83A4D-71A0-4A89-B3ED-36B770454202}.Debug|Win32.ActiveCfg = Debug|Win32
+		{4CA83A4D-71A0-4A89-B3ED-36B770454202}.Debug|Win32.Build.0 = Debug|Win32
+		{4CA83A4D-71A0-4A89-B3ED-36B770454202}.Debug|x64.ActiveCfg = Debug|x64
+		{4CA83A4D-71A0-4A89-B3ED-36B770454202}.Debug|x64.Build.0 = Debug|x64
+		{4CA83A4D-71A0-4A89-B3ED-36B770454202}.Release|Win32.ActiveCfg = Release|Win32
+		{4CA83A4D-71A0-4A89-B3ED-36B770454202}.Release|Win32.Build.0 = Release|Win32
+		{4CA83A4D-71A0-4A89-B3ED-36B770454202}.Release|x64.ActiveCfg = Release|x64
+		{4CA83A4D-71A0-4A89-B3ED-36B770454202}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
