@@ -27,8 +27,12 @@ public:
 	static void Open(int tab = 0);
 	static void OpenSkin(Skin* skin);
 
+	static void UpdateSelectedSkinOptions(Skin* skin);
+
 	static void UpdateSkins(Skin* skin, bool deleted = false);
 	static void UpdateLayouts();
+
+	static void CloseDialog() { if (c_Dialog) c_Dialog->HandleMessage(WM_CLOSE, 0, 0); }
 
 protected:
 	virtual INT_PTR HandleMessage(UINT uMsg, WPARAM wParam, LPARAM lParam);
@@ -44,6 +48,7 @@ private:
 		enum Id
 		{
 			Id_ActiveSkinsButton = 100,
+			Id_NewSkinButton,
 			Id_SkinsTreeView,
 			Id_CreateSkinPackageButton,
 			Id_FileLabel,
@@ -73,10 +78,12 @@ private:
 		};
 
 		TabSkins();
+		~TabSkins();
 
 		void Create(HWND owner);
 		virtual void Initialize();
 
+		void UpdateSelected(Skin* skin);
 		void Update(Skin* skin, bool deleted);
 
 		static void SelectTreeItem(HWND tree, HTREEITEM item, LPCWSTR name);
@@ -91,6 +98,11 @@ private:
 		void DisableControls(bool clear = false);
 		void ReadSkin();
 
+		static LRESULT CALLBACK NewSkinButtonSubclass(HWND hwnd, UINT msg, WPARAM wParam,
+			LPARAM lParam, UINT_PTR uId, DWORD_PTR data);
+		static LRESULT CALLBACK SkinsTreeViewSubclass(HWND hwnd, UINT msg, WPARAM wParam,
+			LPARAM lParam, UINT_PTR uId, DWORD_PTR data);
+
 		static std::wstring GetTreeSelectionPath(HWND tree);
 		static int PopulateTree(HWND tree, TVINSERTSTRUCT& tvi, int index = 0);
 
@@ -99,6 +111,9 @@ private:
 		Skin* m_SkinWindow;
 		bool m_HandleCommands;
 		bool m_IgnoreUpdate;
+
+		static HBRUSH s_NewSkinBkBrush;
+		static COLORREF s_NewSkinBkColor;
 	};
 
 	// Layouts tab

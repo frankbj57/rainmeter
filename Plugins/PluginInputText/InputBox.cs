@@ -16,6 +16,7 @@ namespace InputText
         private SkinWindow parent = null;
 
         private bool _FocusDismiss = true;
+        private bool _Numeric = false;
         private string _TextValue = string.Empty;
 
         public InputBox(SkinWindow parent)
@@ -42,6 +43,31 @@ namespace InputText
             this.BringToFront();
             this.Activate();
             this.BringToFront();
+        }
+
+
+        private void txtInput_KeyPressed(object sender, KeyPressEventArgs e)
+        {
+            if (_Numeric)
+            {
+                if (!char.IsControl(e.KeyChar) && (!char.IsDigit(e.KeyChar)) 
+                    && (e.KeyChar != '.') && (e.KeyChar != '-'))
+                {
+                    e.Handled = true;
+                }
+
+                // only allow one decimal point
+                if (e.KeyChar == '.' && (sender as TextBox).Text.IndexOf('.') > -1)
+                {
+                    e.Handled = true;
+                }
+
+                // only allow minus sign at the beginning
+                if (e.KeyChar == '-' && (sender as TextBox).Text.Length > 0)
+                {
+                    e.Handled = true;
+                }
+            }
         }
 
         // All exceptions are swallowed for the sake of this example.  Since the majority
@@ -274,6 +300,22 @@ namespace InputText
         public void MakeFocusDismiss(bool bDismissing)
         {
             this._FocusDismiss = bDismissing;
+        }
+		#endregion
+        #region TextMaxLength(int length)
+        public void TextMaxLength(string length)
+        {
+            try
+            {
+                this.txtInput.MaxLength = int.Parse(length);
+            }
+            catch { }
+        }
+        #endregion
+        #region MakeNumeric(bool numeric) //ES_NUMBER
+        public void MakeNumeric(bool numeric)
+        {
+            _Numeric = numeric;
         }
         #endregion
 

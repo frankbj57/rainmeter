@@ -10,7 +10,6 @@
 #include "TintedImage.h"
 #include "ConfigParser.h"
 #include "System.h"
-#include "Error.h"
 #include "Logger.h"
 
 using namespace Gdiplus;
@@ -615,7 +614,7 @@ void TintedImage::ReadOptions(ConfigParser& parser, const WCHAR* section, const 
 	std::wstring oldPath = m_Path;
 
 	m_Path = parser.ReadString(section, m_OptionArray[OptionIndexImagePath], imagePath);
-	PathUtil::AppendBacklashIfMissing(m_Path);
+	PathUtil::AppendBackslashIfMissing(m_Path);
 
 	m_HasPathChanged = (oldPath != m_Path);
 

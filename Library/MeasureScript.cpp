@@ -7,7 +7,7 @@
 
 #include "StdAfx.h"
 #include "MeasureScript.h"
-#include "lua/LuaManager.h"
+#include "lua/LuaHelper.h"
 #include "Util.h"
 #include "Rainmeter.h"
 
@@ -20,13 +20,11 @@ MeasureScript::MeasureScript(Skin* skin, const WCHAR* name) : Measure(skin, name
 	m_HasGetStringFunction(false),
 	m_ValueType(LUA_TNIL)
 {
-	LuaManager::Initialize();
 }
 
 MeasureScript::~MeasureScript()
 {
 	UninitializeLuaScript();
-	LuaManager::Finalize();
 }
 
 void MeasureScript::UninitializeLuaScript()
@@ -127,7 +125,7 @@ void MeasureScript::ReadOptions(ConfigParser& parser, const WCHAR* section)
 					if (lua_isnil(L, -1) == 0)
 					{
 						lua_pushnil(L);
-					
+
 						// Look in the table for values to read from the section
 						while (lua_next(L, -2))
 						{
@@ -183,30 +181,81 @@ void MeasureScript::Command(const std::wstring& command)
 	m_LuaScript.RunString(command);
 }
 
+bool MeasureScript::CommandWithReturn(const std::wstring& command, std::wstring& strValue)
+{
+	// Scripts need to be initialized so that any variables declared in
+	// the Initialize() function in the lua script file are accessible.
+	// Return "0" so that no errors are thrown for forumlas.
+	if (!m_Initialized)
+	{
+		strValue = L"0";
+		return true;
+	}
+
+	size_t sPos = command.find_first_of(L'(');
+	if (sPos != std::wstring::npos)
+	{
+		// Function call
+		size_t ePos = command.find_last_of(L')');
+		if (ePos == std::wstring::npos ||
+			sPos > ePos ||
+			command.size() < 3)
+		{
+			LogErrorF(this, L"Invalid function call: %s", command.c_str());
+			return false;
+		}
+
+		std::wstring funcName = command.substr(0, sPos);
+		auto args = ConfigParser::Tokenize2(
+			command.substr(sPos + 1, ePos - sPos - 1),
+			L',',
+			PairedPunctuation::BothQuotes);
+
+		if (!m_LuaScript.RunCustomFunction(funcName, args, strValue))
+		{
+			if (!strValue.empty())
+			{
+				LogErrorF(this, L"%s", strValue.c_str());
+			}
+			return false;
+		}
+	}
+	else
+	{
+		if (!m_LuaScript.GetLuaVariable(command, strValue))
+		{
+			LogErrorF(this, L"%s", strValue.c_str());
+			return false;
+		}
+	}
+
+	return true;
+}
+
 //static void stackDump(lua_State *L)
 //{
-//	LuaManager::LuaLogger::Debug(" ----------------  Stack Dump ----------------" );
+//	LuaHelper::LuaLogger::Debug(" ----------------  Stack Dump ----------------" );
 //	for (int i = lua_gettop(L); i > 0; --i)
 //	{
 //		int t = lua_type(L, i);
 //		switch (t)
 //		{
 //		case LUA_TSTRING:
-//			LuaManager::LuaLogger::Debug("%d:'%s'", i, lua_tostring(L, i));
+//			LuaHelper::LuaLogger::Debug("%d:'%s'", i, lua_tostring(L, i));
 //			break;
 //
 //		case LUA_TBOOLEAN:
-//			LuaManager::LuaLogger::Debug("%d: %s", i, lua_toboolean(L, i) ? "true" : "false");
+//			LuaHelper::LuaLogger::Debug("%d: %s", i, lua_toboolean(L, i) ? "true" : "false");
 //			break;
 //
 //		case LUA_TNUMBER:
-//			LuaManager::LuaLogger::Debug("%d: %g", i, lua_tonumber(L, i));
+//			LuaHelper::LuaLogger::Debug("%d: %g", i, lua_tonumber(L, i));
 //			break;
 //
 //		default:
-//			LuaManager::LuaLogger::Debug("%d: %s", i, lua_typename(L, t));
+//			LuaHelper::LuaLogger::Debug("%d: %s", i, lua_typename(L, t));
 //			break;
 //		}
 //	}
-//	LuaManager::LuaLogger::Debug("--------------- Stack Dump Finished ---------------" );
+//	LuaHelper::LuaLogger::Debug("--------------- Stack Dump Finished ---------------" );
 //}

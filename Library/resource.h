@@ -5,6 +5,7 @@
 #define IDC_STATIC                                   -1
 #define IDI_RAINMETER                                100
 #define IDI_TRAY                                     101
+#define IDI_ADDFOLDER                                102
 
 #define IDI_SKININSTALLER                            200
 #define IDB_INSTALLHEADER                            201
@@ -78,7 +79,6 @@
 #define IDM_INSTALL_BACKUPSKINS                      4200
 #define IDM_INSTALL_SYSTEMFONTS                      4201
 #define IDM_INSTALL_FORMAT                           4202
-
 
 #define ID_STR_NUM_BUTTONWIDTH                       1998
 #define ID_STR_NUM_LABELWIDTH                        1999
@@ -228,6 +228,37 @@
 #define ID_STR_FAVORITES                             2144
 #define ID_STR_NOFAVORITES                           2145
 #define ID_STR_CUSTOMSKINACTIONS                     2146
+#define ID_STR_NUMBER                                2147
+#define ID_STR_STRING                                2148
+#define ID_STR_EXTERNALPLUGINS                       2149
+#define ID_STR_BUILTINPLUGINS                        2150
+
+#define ID_STR_CREATENEWSKIN                         2999
+#define ID_STR_NEWSKIN                               3000
+#define ID_STR_TEMPLATE                              3001
+#define ID_STR_TEMPLATEE                             3002
+#define ID_STR_ADDFOLDER                             3003
+#define ID_STR_ADDRESOURCES                          3004
+#define ID_STR_ADDSKIN                               3005
+#define ID_STR_RENAME                                3006
+#define ID_STR_SAVENEWTEMPLATE                       3007
+#define ID_STR_SAVEDTEMPLATES                        3008
+#define ID_STR_USEDEFAULTTEMPLATE                    3009
+#define ID_STR_CREATEFOLDERFAIL                      3010
+#define ID_STR_CREATEFILEFAIL                        3011
+#define ID_STR_FOLDEREXISTS                          3012
+#define ID_STR_FILEEXISTS                            3013
+#define ID_STR_RENAMEFOLDERFAIL                      3014
+#define ID_STR_RENAMEFILEFAIL                        3015
+#define ID_STR_FOLDERDELETE                          3016
+#define ID_STR_FILEDELETE                            3017
+#define ID_STR_FOLDERDELETEFAIL                      3018
+#define ID_STR_FILEDELETEFAIL                        3019
+#define ID_STR_TEMPLATEDOESNOTEXIST                  3020
+#define ID_STR_TEMPLATEEXISTS                        3021
+#define ID_STR_TEMPLATEFOLDERFAIL                    3022
+#define ID_STR_TEMPLATEFILEFAIL                      3023
+#define ID_STR_TEMPLATEDELETE                        3024
 
 #define IDM_REFRESH                                  4001
 #define IDM_QUIT                                     4002
@@ -285,6 +316,18 @@
 #define IDM_MANAGESKINSMENU_EDIT                     4058
 #define IDM_COPY                                     4059
 #define IDM_SKIN_FAVORITE                            4061
+#define IDM_CREATENEWSKIN                            4062
+#define IDM_DEFAULT_TEMPLATE                         4063
+#define IDM_NEWSKINMENU_EXPAND                       4064
+#define IDM_NEWSKINMENU_OPENFOLDER                   4065
+#define IDM_NEWSKINMENU_EDITSKIN                     4066
+#define IDM_NEWSKINMENU_EDITFOLDERNAME               4067
+#define IDM_NEWSKINMENU_EDITFILENAME                 4068
+#define IDM_NEWSKINMENU_DELETEFOLDER                 4069
+#define IDM_NEWSKINMENU_DELETEFILE                   4070
+#define IDM_COPYNUMBERVALUE                          4071
+#define IDM_COPYSTRINGVALUE                          4072
+#define IDM_COPYRANGE                                4073
 
 #define IDM_SKIN_CUSTOMCONTEXTMENU_FIRST             9000
 #define IDM_SKIN_CUSTOMCONTEXTMENU_LAST              9024
@@ -296,3 +339,5 @@
 #define ID_THEME_LAST                                43000
 #define ID_MONITOR_FIRST                             43001
 #define ID_MONITOR_LAST                              44000
+#define ID_TEMPLATE_FIRST                            45001
+#define ID_TEMPLATE_LAST                             46000

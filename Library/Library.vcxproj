@@ -34,7 +34,7 @@
       <PrecompiledHeader>Use</PrecompiledHeader>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>comctl32.lib;dwmapi.lib;Wininet.lib;UxTheme.lib;Winmm.lib;gdiplus.lib;Iphlpapi.lib;shlwapi.lib;d2d1.lib;dwrite.lib;windowscodecs.lib;Version.lib;Imagehlp.lib;Urlmon.lib;psapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>comctl32.lib;dwmapi.lib;Wininet.lib;UxTheme.lib;Winmm.lib;gdiplus.lib;Iphlpapi.lib;shlwapi.lib;d2d1.lib;dwrite.lib;windowscodecs.lib;Version.lib;Imagehlp.lib;Urlmon.lib;psapi.lib;dxguid.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <DelayLoadDLLs>dwmapi.dll;Iphlpapi.dll;Winmm.dll;Version.dll;Imagehlp.dll;Urlmon.dll;psapi.dll;$(DelayLoadTestDLL)</DelayLoadDLLs>
       <ModuleDefinitionFile>Exports.def</ModuleDefinitionFile>
       <Profile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</Profile>
@@ -52,10 +52,12 @@
     <ClCompile Include="DialogAbout.cpp" />
     <ClCompile Include="DialogInstall.cpp" />
     <ClCompile Include="DialogManage.cpp" />
+    <ClCompile Include="DialogNewSkin.cpp" />
     <ClCompile Include="DialogPackage.cpp" />
     <ClCompile Include="Group.cpp" />
     <ClCompile Include="IfActions.cpp" />
     <ClCompile Include="Logger.cpp" />
+    <ClCompile Include="lua\LuaHelper.cpp" />
     <ClCompile Include="Measure.cpp" />
     <ClCompile Include="MeasureCalc.cpp" />
     <ClCompile Include="MeasureCPU.cpp" />
@@ -87,6 +89,7 @@
     <ClCompile Include="MeterLine.cpp" />
     <ClCompile Include="MeterRotator.cpp" />
     <ClCompile Include="MeterRoundLine.cpp" />
+    <ClCompile Include="MeterShape.cpp" />
     <ClCompile Include="MeterString.cpp" />
     <ClCompile Include="Mouse.cpp" />
     <ClCompile Include="NowPlaying\Cover.cpp" />
@@ -120,7 +123,6 @@
     <ClCompile Include="TrayIcon.cpp" />
     <ClCompile Include="UpdateCheck.cpp" />
     <ClCompile Include="Util.cpp" />
-    <ClCompile Include="lua\LuaManager.cpp" />
     <ClCompile Include="lua\LuaScript.cpp" />
     <ClCompile Include="lua\glue\LuaMeasure.cpp" />
     <ClCompile Include="lua\glue\LuaMeter.cpp" />
@@ -137,12 +139,13 @@
     <ClInclude Include="Dialog.h" />
     <ClInclude Include="DialogAbout.h" />
     <ClInclude Include="DialogInstall.h" />
+    <ClInclude Include="DialogNewSkin.h" />
     <ClInclude Include="DialogPackage.h" />
-    <ClInclude Include="Error.h" />
     <ClInclude Include="Group.h" />
     <ClInclude Include="IfActions.h" />
     <ClInclude Include="DialogManage.h" />
     <ClInclude Include="Logger.h" />
+    <ClInclude Include="lua\LuaHelper.h" />
     <ClInclude Include="Measure.h" />
     <ClInclude Include="MeasureCalc.h" />
     <ClInclude Include="MeasureCPU.h" />
@@ -174,6 +177,7 @@
     <ClInclude Include="MeterLine.h" />
     <ClInclude Include="MeterRotator.h" />
     <ClInclude Include="MeterRoundLine.h" />
+    <ClInclude Include="MeterShape.h" />
     <ClInclude Include="MeterString.h" />
     <ClInclude Include="Mouse.h" />
     <ClInclude Include="NowPlaying\Cover.h" />
@@ -201,7 +205,6 @@
     <ClInclude Include="TrayIcon.h" />
     <ClInclude Include="UpdateCheck.h" />
     <ClInclude Include="Util.h" />
-    <ClInclude Include="lua\LuaManager.h" />
     <ClInclude Include="lua\LuaScript.h" />
   </ItemGroup>
   <ItemGroup>

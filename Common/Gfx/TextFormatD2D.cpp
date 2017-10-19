@@ -8,6 +8,7 @@
 #include "StdAfx.h"
 #include "TextFormatD2D.h"
 #include "Canvas.h"
+#include "Util/D2DUtil.h"
 #include "Util/DWriteHelpers.h"
 #include "TextInlineFormat/TextInlineFormatCase.h"
 #include "TextInlineFormat/TextInlineFormatCharacterSpacing.h"
@@ -16,6 +17,7 @@
 #include "TextInlineFormat/TextInlineFormatGradientColor.h"
 #include "TextInlineFormat/TextInlineFormatItalic.h"
 #include "TextInlineFormat/TextInlineFormatOblique.h"
+#include "TextInlineFormat/TextInlineFormatShadow.h"
 #include "TextInlineFormat/TextInlineFormatSize.h"
 #include "TextInlineFormat/TextInlineFormatStretch.h"
 #include "TextInlineFormat/TextInlineFormatStrikethrough.h"
@@ -30,11 +32,6 @@
 #include <GdiPlus.h>
 
 namespace {
-
-D2D1_COLOR_F ToColorF(const Gdiplus::Color& color)
-{
-	return D2D1::ColorF(color.GetR() / 255.0f, color.GetG() / 255.0f, color.GetB() / 255.0f, color.GetA() / 255.0f);
-}
 
 int Clamp(int value, int _min, int _max)
 {
@@ -52,6 +49,8 @@ int Clamp(int value, int _min, int _max)
 namespace Gfx {
 
 TextFormatD2D::TextFormatD2D() :
+	m_FontWeight(-1),
+	m_HasWeightChanged(false),
 	m_ExtraHeight(),
 	m_LineGap(),
 	m_Trimming(),
@@ -121,7 +120,7 @@ bool TextFormatD2D::CreateLayout(ID2D1RenderTarget* target, const std::wstring& 
 		m_HasInlineOptionsChanged = true;
 	};
 
-	if (m_TextLayout && !strChanged && !m_HasInlineOptionsChanged)
+	if (m_TextLayout && !strChanged && !m_HasInlineOptionsChanged && !m_HasWeightChanged)
 	{
 		bool hasChanged = false;
 		if (maxW != m_TextLayout->GetMaxWidth())
@@ -148,6 +147,14 @@ bool TextFormatD2D::CreateLayout(ID2D1RenderTarget* target, const std::wstring& 
 			str, strLen, m_TextFormat.Get(), maxW, maxH, m_TextLayout.ReleaseAndGetAddressOf());
 		if (!m_TextLayout) return false;
 
+		// Set the font weight if valid
+		const DWRITE_TEXT_RANGE range = { 0, strLen };
+		if (m_FontWeight > 0 && m_FontWeight < 1000)
+		{
+			m_TextLayout->SetFontWeight((DWRITE_FONT_WEIGHT)m_FontWeight, range);
+			m_HasWeightChanged = false;
+		}
+
 		if (gdiEmulation)
 		{
 			Microsoft::WRL::ComPtr<IDWriteTextLayout1> textLayout1;
@@ -155,7 +162,6 @@ bool TextFormatD2D::CreateLayout(ID2D1RenderTarget* target, const std::wstring& 
 
 			const float xOffset = m_TextFormat->GetFontSize() / 6.0f;
 			const float emOffset = xOffset / 24.0f;
-			const DWRITE_TEXT_RANGE range = {0, strLen};
 			textLayout1->SetCharacterSpacing(emOffset, emOffset, 0.0f, range);
 		}
 
@@ -317,6 +323,16 @@ void TextFormatD2D::SetProperties(
 	}
 }
 
+void TextFormatD2D::SetFontWeight(int weight)
+{
+	if (weight < 1 || weight > 999 || weight == m_FontWeight) return;
+
+	m_FontWeight = weight;
+
+	// Signal to recreate the layout
+	m_HasWeightChanged = true;
+}
+
 DWRITE_TEXT_METRICS TextFormatD2D::GetMetrics(const std::wstring& srcStr, bool gdiEmulation, float maxWidth)
 {
 	UINT32 strLen = (UINT32)srcStr.length();
@@ -346,6 +362,13 @@ DWRITE_TEXT_METRICS TextFormatD2D::GetMetrics(const std::wstring& srcStr, bool g
 		textLayout.GetAddressOf());
 	if (SUCCEEDED(hr))
 	{
+		// Set the font weight if valid
+		if (m_FontWeight > 0 && m_FontWeight < 1000)
+		{
+			const DWRITE_TEXT_RANGE range = { 0, strLen };
+			textLayout->SetFontWeight((DWRITE_FONT_WEIGHT)m_FontWeight, range);
+		}
+
 		ApplyInlineFormatting(textLayout.Get());
 
 		const float xOffset = m_TextFormat->GetFontSize() / 6.0f;
@@ -606,13 +629,19 @@ bool TextFormatD2D::CreateInlineOption(const size_t index, const std::wstring pa
 	{
 		if (optSize > 1)
 		{
-			FLOAT leading = (FLOAT)ConfigParser::ParseDouble(options[1].c_str(), FLT_MAX);
+			auto parseOptional = [](const WCHAR* value) -> FLOAT
+			{
+				if (_wcsnicmp(value, L"*", 1) == 0) return FLT_MAX;
+				return (FLOAT)ConfigParser::ParseDouble(value, FLT_MAX);
+			};
+
+			FLOAT leading = parseOptional(options[1].c_str());
 			FLOAT trailing = FLT_MAX;
 			FLOAT advanceWidth = -1.0f;
 
 			if (optSize > 2)
 			{
-				trailing = (FLOAT)ConfigParser::ParseDouble(options[2].c_str(), FLT_MAX);
+				trailing = parseOptional(options[2].c_str());
 			}
 
 			if (optSize > 3)
@@ -660,6 +689,20 @@ bool TextFormatD2D::CreateInlineOption(const size_t index, const std::wstring pa
 	{
 		UpdateInlineOblique(index, pattern);
 		return true;
+	}
+	else if (_wcsicmp(option, L"SHADOW") == 0)
+	{
+		if (optSize >= 5)
+		{
+			D2D1_POINT_2F offset = {
+				(FLOAT)ConfigParser::ParseDouble(options[1].c_str(), 1.0),
+				(FLOAT)ConfigParser::ParseDouble(options[2].c_str(), 1.0) };
+
+			FLOAT blur = (FLOAT)ConfigParser::ParseDouble(options[3].c_str(), 3.0);
+			Gdiplus::Color color = ConfigParser::ParseColor(options[4].c_str());
+			UpdateInlineShadow(index, pattern, blur, offset, color);
+			return true;
+		}
 	}
 	else if(_wcsicmp(option, L"SIZE") == 0)
 	{
@@ -827,17 +870,17 @@ void TextFormatD2D::UpdateInlineFace(const size_t& index, const std::wstring pat
 void TextFormatD2D::UpdateInlineGradientColor(const size_t& index, const std::wstring pattern,
 	const std::vector<std::wstring> args, const bool altGamma)
 {
-	const UINT32 angle = (360 + (ConfigParser::ParseInt(args[0].c_str(), 0) % 360)) % 360;
+	const FLOAT angle = (FLOAT)fmod((360.0 + fmod(ConfigParser::ParseDouble(args[0].c_str(), 0.0), 360.0)), 360.0);
 
 	std::vector<std::wstring> tokens;
 	std::vector<D2D1_GRADIENT_STOP> stops(args.size() - 1);
 	for (size_t i = 1; i < args.size(); ++i)
 	{
-		tokens = ConfigParser::Tokenize(args[i], L";");
+		tokens = ConfigParser::Tokenize2(args[i], L';', PairedPunctuation::Parentheses);
 		if (tokens.size() == 2)
 		{
-			stops[i - 1].color = ToColorF(ConfigParser::ParseColor(tokens[0].c_str()));
-			stops[i - 1].position = (float)ConfigParser::ParseDouble(tokens[1].c_str(), 0.0f);
+			stops[i - 1].color = Util::ToColorF(ConfigParser::ParseColor(tokens[0].c_str()));
+			stops[i - 1].position = (FLOAT)ConfigParser::ParseDouble(tokens[1].c_str(), 0.0);
 		}
 	}
 
@@ -846,7 +889,7 @@ void TextFormatD2D::UpdateInlineGradientColor(const size_t& index, const std::ws
 	{
 		D2D1::ColorF color = { 0.0f, 0.0f, 0.0f, 0.0f };
 		D2D1_GRADIENT_STOP stop = { 0.0f, color };
-		if (stops[0].position < 0.5)
+		if (stops[0].position < 0.5f)
 		{
 			stop.position = 1.0f;
 		}
@@ -914,6 +957,29 @@ void TextFormatD2D::UpdateInlineOblique(const size_t& index, const std::wstring 
 	else
 	{
 		m_TextInlineFormat[index].reset(new TextInlineFormat_Oblique(pattern));
+		m_HasInlineOptionsChanged = true;
+	}
+}
+
+void TextFormatD2D::UpdateInlineShadow(const size_t& index, const std::wstring pattern,
+	const FLOAT blur, const D2D1_POINT_2F offset, const Gdiplus::Color color)
+{
+	if (index >= m_TextInlineFormat.size())
+	{
+		m_TextInlineFormat.emplace_back(new TextInlineFormat_Shadow(pattern, blur, offset, color));
+		m_HasInlineOptionsChanged = true;
+	}
+	else if (m_TextInlineFormat[index]->GetType() == Gfx::InlineType::Shadow)
+	{
+		auto option = dynamic_cast<TextInlineFormat_Shadow*>(m_TextInlineFormat[index].get());
+		if (option->CompareAndUpdateProperties(pattern, blur, offset, color))
+		{
+			m_HasInlineOptionsChanged = true;
+		}
+	}
+	else
+	{
+		m_TextInlineFormat[index].reset(new TextInlineFormat_Shadow(pattern, blur, offset, color));
 		m_HasInlineOptionsChanged = true;
 	}
 }
@@ -1058,7 +1124,8 @@ void TextFormatD2D::ApplyInlineFormatting(IDWriteTextLayout* layout)
 		Gfx::InlineType type = fmt->GetType();
 		if (type != Gfx::InlineType::Color &&
 			type != Gfx::InlineType::GradientColor &&
-			type != Gfx::InlineType::Case)
+			type != Gfx::InlineType::Case &&
+			type != Gfx::InlineType::Shadow)
 		{
 			fmt->ApplyInlineFormat(layout);
 		}
@@ -1100,6 +1167,25 @@ void TextFormatD2D::ApplyInlineCase(std::wstring& str)
 	}
 }
 
+void TextFormatD2D::ApplyInlineShadow(ID2D1RenderTarget* target, ID2D1SolidColorBrush* solidBrush,
+	const UINT32 strLen, const D2D1_POINT_2F& drawPosition)
+{
+	for (const auto& fmt : m_TextInlineFormat)
+	{
+		if (fmt->GetType() == Gfx::InlineType::Shadow)
+		{
+			auto option = dynamic_cast<TextInlineFormat_Shadow*>(fmt.get());
+			option->ApplyInlineFormat(target, m_TextLayout.Get(), solidBrush, strLen, drawPosition);
+
+			// We need to reset the color options after the shadow effect because the shadow effect
+			// can turn some characters invisible.
+			ResetInlineColoring(solidBrush, strLen);
+			ResetGradientPosition(&drawPosition);
+			ApplyInlineColoring(target, &drawPosition);
+		}
+	}
+}
+
 void TextFormatD2D::ResetGradientPosition(const D2D1_POINT_2F* point)
 {
 	for (const auto& fmt : m_TextInlineFormat)
@@ -1112,7 +1198,7 @@ void TextFormatD2D::ResetGradientPosition(const D2D1_POINT_2F* point)
 	}
 }
 
-void TextFormatD2D::ResetInlineColoring(ID2D1SolidColorBrush* solidColor, const UINT strLen)
+void TextFormatD2D::ResetInlineColoring(ID2D1SolidColorBrush* solidColor, const UINT32 strLen)
 {
 	DWRITE_TEXT_RANGE range = { 0, strLen };
 	m_TextLayout->SetDrawingEffect(solidColor, range);

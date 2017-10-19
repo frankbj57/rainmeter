@@ -8,7 +8,6 @@
 #include "StdAfx.h"
 #include "MeterImage.h"
 #include "Measure.h"
-#include "Error.h"
 #include "Rainmeter.h"
 #include "System.h"
 #include "../Common/PathUtil.h"
@@ -129,7 +128,7 @@ void MeterImage::ReadOptions(ConfigParser& parser, const WCHAR* section)
 
 	// Deprecated!
 	std::wstring path = parser.ReadString(section, L"Path", L"");
-	PathUtil::AppendBacklashIfMissing(path);
+	PathUtil::AppendBackslashIfMissing(path);
 
 	// Read tinting options
 	m_Image.ReadOptions(parser, section, path.c_str());
@@ -160,7 +159,7 @@ bool MeterImage::Update()
 			{
 				if (m_ImageName.empty())
 				{
-					m_ImageNameResult = m_Measures[0]->GetStringOrFormattedValue(AUTOSCALE_OFF, 1, 0, false);
+					m_ImageNameResult = m_Measures[0]->GetStringOrFormattedValue(AUTOSCALE_OFF, 1.0, 0, false);
 				}
 				else
 				{
@@ -168,7 +167,7 @@ bool MeterImage::Update()
 					if (!ReplaceMeasures(m_ImageNameResult, AUTOSCALE_OFF))
 					{
 						// ImageName doesn't contain any measures, so use the result of MeasureName.
-						m_ImageNameResult = m_Measures[0]->GetStringOrFormattedValue(AUTOSCALE_OFF, 1, 0, false);
+						m_ImageNameResult = m_Measures[0]->GetStringOrFormattedValue(AUTOSCALE_OFF, 1.0, 0, false);
 					}
 				}
 			}

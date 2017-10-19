@@ -8,7 +8,7 @@
 #ifndef __LUASCRIPT_H__
 #define __LUASCRIPT_H__
 
-#include "LuaManager.h"
+#include "LuaHelper.h"
 
 class LuaScript
 {
@@ -18,24 +18,31 @@ public:
 
 	bool Initialize(const std::wstring& scriptFile);
 	void Uninitialize();
-	bool IsInitialized() { return m_Ref != LUA_NOREF; }
+	bool IsInitialized() { return m_State != nullptr; }
 
 	const std::wstring& GetFile() { return m_File; }
 	int GetRef() { return m_Ref; }
 	bool IsUnicode() const { return m_Unicode; }
 
-	LuaManager::ScopedLuaState GetState() { return LuaManager::GetState(m_Unicode); }
+	LuaHelper::UnicodeScript GetState() { return LuaHelper::GetState(m_State, m_Unicode, m_Ref, m_File); }
 
 	bool IsFunction(const char* funcName);
 	void RunFunction(const char* funcName);
 	int RunFunctionWithReturn(const char* funcName, double& numValue, std::wstring& strValue);
 	void RunString(const std::wstring& str);
+	bool RunCustomFunction(const std::wstring& funcName, const std::vector<std::wstring>& args, std::wstring& strValue);
+	bool GetLuaVariable(const std::wstring& varName, std::wstring& strValue);
 
 protected:
+	static void RegisterGlobal(lua_State* L);
+	static void RegisterMeasure(lua_State* L);
+	static void RegisterMeter(lua_State* L);
+	static void RegisterSkin(lua_State* L);
+
 	std::wstring m_File;
-	int m_Ref;
 	bool m_Unicode;
+	int m_Ref;
+	lua_State* m_State;
 };
 
 #endif
-

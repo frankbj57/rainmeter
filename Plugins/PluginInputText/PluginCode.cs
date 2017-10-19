@@ -31,6 +31,8 @@ namespace InputText
             ReadOption("SolidColor", param.Options);
             ReadOption("Password", param.Options);
             ReadOption("TopMost", param.Options);
+            ReadOption("InputLimit", param.Options, true);
+            ReadOption("InputNumber", param.Options);
 
             param.DismissAction = rm.ReadString("OnDismissAction", "", false);
 
@@ -182,7 +184,7 @@ namespace InputText
                             break;
                         }
 
-                        // Ask Rainmeter to set the variable using a bang (http://rainmeter.net/RainCMS/?q=Bangs)
+                        // Ask Rainmeter to set the variable using a bang (https://docs.rainmeter.net/manual/bangs/)
                         API.Execute(rm.GetSkin(), "!SetVariable " + param.Command + " \"" + sInput + "\"");
 
                         // Note that the skin needs DynamicVariables=1 in the measure's settings or the above
@@ -334,6 +336,18 @@ namespace InputText
 
                 changeSetting("DefaultValue", input.DefaultValue);
 
+                changeSetting("InputLimit", input.TextMaxLength);
+
+                if (Overrides.ContainsKey("InputNumber"))
+                {
+                    input.MakeNumeric(Overrides["InputNumber"] == "1");
+                }
+
+                else if (Options.ContainsKey("InputNumber"))
+                {
+                    input.MakeNumeric(Options["InputNumber"].Trim() == "1");
+                }
+
                 #endregion
             }
 
@@ -360,13 +374,10 @@ namespace InputText
 
         private void FinalizePluginCode()
         {
-            lock (this._InputBoxLocker)
+            if (this._InputBox != null)
             {
-                if (this._InputBox != null)
-                {
-                    this._InputBox.Abort();
-                    System.Threading.Thread.Sleep(50);  // Wait for closing input box
-                }
+                this._InputBox.Abort();
+                System.Threading.Thread.Sleep(50);  // Wait for closing input box
             }
         }
         #endregion

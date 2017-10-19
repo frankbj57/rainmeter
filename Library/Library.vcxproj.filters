@@ -19,9 +19,6 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="lua\LuaManager.cpp">
-      <Filter>Lua</Filter>
-    </ClCompile>
     <ClCompile Include="lua\LuaScript.cpp">
       <Filter>Lua</Filter>
     </ClCompile>
@@ -117,6 +114,7 @@
     <ClCompile Include="MeterLine.cpp" />
     <ClCompile Include="MeterRotator.cpp" />
     <ClCompile Include="MeterRoundLine.cpp" />
+    <ClCompile Include="MeterShape.cpp" />
     <ClCompile Include="MeterString.cpp" />
     <ClCompile Include="Mouse.cpp" />
     <ClCompile Include="Rainmeter.cpp" />
@@ -131,11 +129,12 @@
     <ClCompile Include="TrayIcon.cpp" />
     <ClCompile Include="UpdateCheck.cpp" />
     <ClCompile Include="Util.cpp" />
+    <ClCompile Include="lua\LuaHelper.cpp">
+      <Filter>Lua</Filter>
+    </ClCompile>
+    <ClCompile Include="DialogNewSkin.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="lua\LuaManager.h">
-      <Filter>Lua</Filter>
-    </ClInclude>
     <ClInclude Include="lua\LuaScript.h">
       <Filter>Lua</Filter>
     </ClInclude>
@@ -180,7 +179,6 @@
     <ClInclude Include="DialogInstall.h" />
     <ClInclude Include="DialogManage.h" />
     <ClInclude Include="DialogPackage.h" />
-    <ClInclude Include="Error.h" />
     <ClInclude Include="Export.h" />
     <ClInclude Include="Group.h" />
     <ClInclude Include="IfActions.h" />
@@ -216,6 +214,7 @@
     <ClInclude Include="MeterLine.h" />
     <ClInclude Include="MeterRotator.h" />
     <ClInclude Include="MeterRoundLine.h" />
+    <ClInclude Include="MeterShape.h" />
     <ClInclude Include="MeterString.h" />
     <ClInclude Include="Mouse.h" />
     <ClInclude Include="Rainmeter.h" />
@@ -231,6 +230,10 @@
     <ClInclude Include="TrayIcon.h" />
     <ClInclude Include="UpdateCheck.h" />
     <ClInclude Include="Util.h" />
+    <ClInclude Include="lua\LuaHelper.h">
+      <Filter>Lua</Filter>
+    </ClInclude>
+    <ClInclude Include="DialogNewSkin.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Library.rc">

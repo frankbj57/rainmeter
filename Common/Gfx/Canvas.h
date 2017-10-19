@@ -9,6 +9,7 @@
 #define RM_GFX_CANVAS_H_
 
 #include "FontCollectionD2D.h"
+#include "Shape.h"
 #include "TextFormatD2D.h"
 #include "Util/WICBitmapDIB.h"
 #include <memory>
@@ -76,11 +77,22 @@ public:
 
 	void FillRectangle(Gdiplus::Rect& rect, const Gdiplus::SolidBrush& brush);
 
+	void DrawGeometry(Shape& shape, int x, int y);
+
 private:
 	friend class Canvas;
 	friend class FontCollectionD2D;
 	friend class TextFormatD2D;
 	friend class TextInlineFormat_Typography;
+	friend class Shape;
+	friend class Rectangle;
+	friend class RoundedRectangle;
+	friend class Ellipse;
+	friend class Line;
+	friend class Arc;
+	friend class Curve;
+	friend class QuadraticCurve;
+	friend class Path;
 
 	Canvas(const Canvas& other) = delete;
 	Canvas& operator=(Canvas other) = delete;
